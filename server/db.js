@@ -14,17 +14,26 @@ const createTables = async()=> {
     CREATE TABLE users(
       id UUID PRIMARY KEY,
       username VARCHAR(20) UNIQUE NOT NULL,
-      password VARCHAR(255) NOT NULL
+      password VARCHAR(255) NOT NULL,
+      favorite_number INTEGER
     );
   `;
   await client.query(SQL);
 };
 
-const createUser = async({ username, password})=> {
+const updateUserNum = async (id, number)=>{
+  const SQL = `UPDATE users SET "favorite_number" =$1 WHERE "id" =$2`;
+  await client.query(SQL, [number, id]);
+  return true;
+}
+
+const createUser = async({ username, password, favoriteNum})=> {
   const SQL = `
-    INSERT INTO users(id, username, password) VALUES($1, $2, $3) RETURNING *
+    INSERT INTO users(id, username, password, favorite_number) VALUES($1, $2, $3, $4) RETURNING *
   `;
-  const response = await client.query(SQL, [uuid.v4(), username, await bcrypt.hash(password, 5)]);
+  const response = await client.query(SQL, [uuid.v4(), username, await bcrypt.hash(password, 5), 
+  favoriteNum || 10,
+  ]);
   return response.rows[0];
 };
 
@@ -54,7 +63,7 @@ const findUserWithToken = async(token)=> {
     throw error;
   }
   const SQL = `
-    SELECT id, username FROM users WHERE id=$1;
+    SELECT id, username, favorite_number FROM users WHERE id=$1;
   `;
   const response = await client.query(SQL, [id]);
   if(!response.rows.length){
@@ -67,7 +76,7 @@ const findUserWithToken = async(token)=> {
 
 const fetchUsers = async()=> {
   const SQL = `
-    SELECT id, username FROM users;
+    SELECT id, username, favorite_number FROM users;
   `;
   const response = await client.query(SQL);
   return response.rows;
@@ -79,5 +88,6 @@ module.exports = {
   createUser,
   fetchUsers,
   authenticate,
-  findUserWithToken
+  findUserWithToken,
+  updateUserNum,
 };
